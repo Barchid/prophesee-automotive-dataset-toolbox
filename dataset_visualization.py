@@ -22,9 +22,23 @@ import argparse
 from glob import glob
 
 from src.visualize import vis_utils as vis
-
+from matplotlib import pyplot as plt
+from celluloid import Camera
 from src.io.psee_loader import PSEELoader
 
+def animate(frames: np.ndarray):
+    fig, ax = plt.subplots()
+    camera = Camera(fig)
+    plt.axis("off")
+
+    for frame in frames:
+        ax.imshow(frame)
+        camera.snap()
+        
+    anim = camera.animate(interval=50)
+    anim.save('media/example.gif')
+    plt.close('all')
+    exit()
 
 def play_files_parallel(td_files, labels=None, delta_t=50000, skip=0):
     """
@@ -46,8 +60,9 @@ def play_files_parallel(td_files, labels=None, delta_t=50000, skip=0):
     size_x = int(math.ceil(math.sqrt(len(videos))))
     size_y = int(math.ceil(len(videos) / size_x))
     frame = np.zeros((size_y * height, width * size_x, 3), dtype=np.uint8)
-
-    cv2.namedWindow('out', cv2.WINDOW_NORMAL)
+    
+    frames = []
+    # cv2.namedWindow('out', cv2.WINDOW_NORMAL)
 
     # while all videos have something to read
     while not sum([video.done for video in videos]):
@@ -55,6 +70,7 @@ def play_files_parallel(td_files, labels=None, delta_t=50000, skip=0):
         # load events and boxes from all files
         events = [video.load_delta_t(delta_t) for video in videos]
         box_events = [box_video.load_delta_t(delta_t) for box_video in box_videos]
+        
         for index, (evs, boxes) in enumerate(zip(events, box_events)):
             y, x = divmod(index, size_x)
             # put the visualization at the right spot in the grid
@@ -63,10 +79,13 @@ def play_files_parallel(td_files, labels=None, delta_t=50000, skip=0):
             im = vis.make_binary_histo(evs, img=im, width=width, height=height)
 
             vis.draw_bboxes(im, boxes, labelmap=labelmap)
+            frames.append(im)
 
         # display the result
-        cv2.imshow('out', frame)
-        cv2.waitKey(1)
+        # cv2.imshow('out', frame)
+        # cv2.waitKey(1)
+        print(len(frames))
+        animate(frames)
 
 
 def parse_args():
